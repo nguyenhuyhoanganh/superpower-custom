@@ -7,6 +7,7 @@ WORKSPACE="$(dirname "$SOURCE_DIR")"
 
 RULES_DIR="$WORKSPACE/.clinerules"
 WORKFLOWS_DIR="$RULES_DIR/workflows"
+HOOKS_DIR="$RULES_DIR/hooks"
 SKILLS_DIR="$WORKSPACE/.cline/skills"
 
 removed=0
@@ -24,6 +25,17 @@ for wf in brainstorm write-plan execute-plan; do
     removed=$((removed + 1))
   fi
 done
+
+# Hooks — only remove if it's a symlink into our source
+if [ -L "$HOOKS_DIR" ]; then
+  target="$(readlink "$HOOKS_DIR")"
+  case "$target" in
+    "$SOURCE_DIR"/hooks|../*"superpower-custom/hooks")
+      rm "$HOOKS_DIR"
+      removed=$((removed + 1))
+      ;;
+  esac
+fi
 
 # Skills — only remove symlinks (not real folders) that point into our source
 if [ -d "$SKILLS_DIR" ]; then

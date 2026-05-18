@@ -8,6 +8,7 @@ $Workspace = Split-Path -Parent $SourceDir
 
 $RulesDir     = Join-Path $Workspace '.clinerules'
 $WorkflowsDir = Join-Path $RulesDir 'workflows'
+$HooksDir     = Join-Path $RulesDir 'hooks'
 $SkillsDir    = Join-Path (Join-Path $Workspace '.cline') 'skills'
 
 $script:problems = 0
@@ -37,6 +38,42 @@ Test-FileCopy -Source (Join-Path $SourceDir 'rules\00-bootstrap.md') -Target (Jo
 # Workflows
 foreach ($wf in 'brainstorm', 'write-plan', 'execute-plan') {
     Test-FileCopy -Source (Join-Path $SourceDir "workflows\$wf.md") -Target (Join-Path $WorkflowsDir "$wf.md")
+}
+
+# Hooks (junction)
+$hooksPresent = 0
+$hooksSourceDir = Join-Path $SourceDir 'hooks'
+if (Test-Path $hooksSourceDir) {
+    if (-not (Test-Path $HooksDir)) {
+        Write-Host "MISSING junction: $HooksDir"
+        $script:problems++
+    } else {
+        $item = Get-Item $HooksDir -Force
+        if ($item.LinkType -ne 'Junction') {
+            Write-Host "NOT A JUNCTION: $HooksDir"
+            $script:problems++
+        } else {
+            $expectedHooksTarget = (Resolve-Path $hooksSourceDir).Path
+            $actualHooksTarget = $item.Target | Select-Object -First 1
+            if ($actualHooksTarget -ne $expectedHooksTarget) {
+                Write-Host "WRONG TARGET: $HooksDir -> $actualHooksTarget (expected $expectedHooksTarget)"
+                $script:problems++
+            } else {
+                $missingScripts = @()
+                foreach ($name in 'TaskStart','TaskStart.ps1') {
+                    if (-not (Test-Path (Join-Path $HooksDir $name))) {
+                        $missingScripts += $name
+                    }
+                }
+                if ($missingScripts.Count -gt 0) {
+                    Write-Host "Hook scripts missing in ${HooksDir}: $($missingScripts -join ', ')"
+                    $script:problems++
+                } else {
+                    $hooksPresent = 1
+                }
+            }
+        }
+    }
 }
 
 # Skills
@@ -73,9 +110,9 @@ if (Test-Path $skillsSourceDir) {
     }
 }
 
-$total = 1 + 3 + $skillCount
+$total = 1 + 3 + $hooksPresent + $skillCount
 if ($script:problems -eq 0) {
-    Write-Host "OK: $total items installed (1 rule + 3 workflows + $skillCount skills, mixed copy+junction)"
+    Write-Host "OK: $total items installed (1 rule + 3 workflows + $hooksPresent hooks + $skillCount skills, mixed copy+junction)"
     exit 0
 } else {
     Write-Host "FAIL: $($script:problems) problem(s) found"

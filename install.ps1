@@ -10,6 +10,7 @@ $Workspace = Split-Path -Parent $SourceDir
 
 $RulesDir     = Join-Path $Workspace '.clinerules'
 $WorkflowsDir = Join-Path $RulesDir 'workflows'
+$HooksDir     = Join-Path $RulesDir 'hooks'
 $SkillsDir    = Join-Path (Join-Path $Workspace '.cline') 'skills'
 
 New-Item -ItemType Directory -Force -Path $RulesDir, $WorkflowsDir, $SkillsDir | Out-Null
@@ -28,7 +29,19 @@ foreach ($wf in 'brainstorm', 'write-plan', 'execute-plan') {
     }
 }
 
-# 3. Skills (junction)
+# 3. Hooks (junction the whole hooks/ folder so TaskStart + TaskStart.ps1
+#    are both accessible at .clinerules\hooks\)
+$hooksLinked = 0
+$hooksSourceDir = Join-Path $SourceDir 'hooks'
+if (Test-Path $hooksSourceDir) {
+    if (Test-Path $HooksDir) {
+        Remove-Item -Force -Recurse $HooksDir
+    }
+    New-Item -ItemType Junction -Path $HooksDir -Target $hooksSourceDir | Out-Null
+    $hooksLinked = 1
+}
+
+# 4. Skills (junction)
 $skillCount = 0
 $skillsSourceDir = Join-Path $SourceDir 'skills'
 if (Test-Path $skillsSourceDir) {
@@ -45,7 +58,9 @@ if (Test-Path $skillsSourceDir) {
 Write-Host "Installed superpower-custom into $Workspace"
 Write-Host "  Rules:     $RulesDir"
 Write-Host "  Workflows: $WorkflowsDir"
+Write-Host "  Hooks:     $HooksDir ($hooksLinked linked)"
 Write-Host "  Skills:    $SkillsDir ($skillCount linked)"
 Write-Host ""
 Write-Host "Note: bootstrap and workflow files are COPIES on Windows."
 Write-Host "      Re-run install.ps1 after editing those source files."
+Write-Host "      Hooks and skills use junctions (edits live-update)."

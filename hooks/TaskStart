@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# Cline TaskStart hook (macOS/Linux). Cline invokes this script when a task
+# begins. The script reads JSON from stdin and writes JSON to stdout:
+#   {"cancel": false, "contextModification": "<text injected into context>"}
+#
+# Behavior: read the using-superpowers SKILL.md and inject it so the agent
+# always has the skills bootstrap loaded, even if it would otherwise miss
+# the .clinerules/00-bootstrap.md rule.
+
+set -euo pipefail
+
+# Consume stdin JSON (we don't need to parse fields yet).
+cat >/dev/null || true
+
+# Resolve the workspace root from the hook script's actual location.
+# .clinerules/hooks/ is a symlink/junction to superpower-custom/hooks/,
+# so $0 may resolve into the source tree. Walk up two levels from there.
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd -P)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd -P)"
+SKILL_PATH="${PROJECT_ROOT}/.cline/skills/using-superpowers/SKILL.md"
+
+if [ ! -f "$SKILL_PATH" ]; then
+  printf '{"cancel":false}\n'
+  exit 0
+fi
+
+SKILL_CONTENT="$(cat "$SKILL_PATH")"
+CONTEXT="<EXTREMELY_IMPORTANT>
+You have superpowers.
+
+Below is the full content of your 'using-superpowers' skill - your introduction to using skills.
+
+${SKILL_CONTENT}
+</EXTREMELY_IMPORTANT>"
+
+# Escape for JSON string literal using bash parameter substitution.
+# Portable across BSD sed (macOS) and GNU sed (Linux).
+escape_for_json() {
+  local s="$1"
+  s="${s//\\/\\\\}"
+  s="${s//\"/\\\"}"
+  s="${s//$'\n'/\\n}"
+  s="${s//$'\r'/\\r}"
+  s="${s//$'\t'/\\t}"
+  printf '%s' "$s"
+}
+
+ESCAPED="$(escape_for_json "$CONTEXT")"
+
+printf '{"cancel":false,"contextModification":"%s"}\n' "$ESCAPED"

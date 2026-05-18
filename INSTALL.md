@@ -1,5 +1,11 @@
 # Installation Guide
 
+> **This is the `with-hooks` branch.** It adds an auto-load hook
+> (`.clinerules/hooks/TaskStart`) that injects `using-superpowers`
+> content at the start of every task — a stronger fallback than the
+> always-loaded rule alone. See "Auto-load hook" section below for
+> details. If you are on `main`, this hook is not present.
+
 ## Prerequisites
 
 - One of:
@@ -103,6 +109,60 @@ Prefer `install.ps1` unless you already have that set up.
   on the same Windows drive (junctions cannot cross drives).
 - `install.bat` (cmd.exe only) is not provided — PowerShell is required.
 
+## Auto-load hook (this branch only)
+
+On the `with-hooks` branch, installer creates one extra item:
+
+```
+<workspace>/.clinerules/hooks/   →   superpower-custom/hooks/
+   ├── TaskStart                  (bash, used on macOS/Linux)
+   └── TaskStart.ps1              (PowerShell, used on Windows)
+```
+
+### What it does
+
+When Cline starts a task, it invokes the right script for your OS.
+The script reads `.cline/skills/using-superpowers/SKILL.md` and outputs
+JSON with a `contextModification` field. Cline injects that content
+into the agent's context — so even if the agent would miss the
+always-loaded `.clinerules/00-bootstrap.md` rule, it still sees the
+full `using-superpowers` skill upfront.
+
+### When to switch to this branch
+
+Default behavior (`main` branch) relies on the bootstrap rule alone.
+Switch to `with-hooks` if you notice:
+
+- Agent ignores `using-superpowers` on the first turn
+- Agent forgets the skills system after long sessions
+- You want a belt-and-suspenders setup
+
+### Switch and install
+
+```bash
+# macOS / Linux
+git checkout with-hooks
+./superpower-custom/install.sh
+
+# Windows
+git checkout with-hooks
+.\superpower-custom\install.ps1
+```
+
+Verify expects **18 items** on this branch (vs. 17 on `main`):
+`OK: 18 symlinks installed (1 rule + 3 workflows + 1 hooks + 13 skills)`.
+
+### Switching back to main
+
+```bash
+./superpower-custom/uninstall.sh    # or .\superpower-custom\uninstall.ps1
+git checkout main
+./superpower-custom/install.sh      # or .\superpower-custom\install.ps1
+```
+
+Run uninstall **before** switching, so the hooks symlink/junction is
+cleaned up. `main` branch's installer doesn't know about hooks.
+
 ## Manual Installation (no scripts)
 
 If you cannot run `install.sh` / `install.ps1` (restricted environment,
@@ -119,7 +179,16 @@ is exactly the same as what the scripts produce.
 | `workflows/brainstorm.md` | `.clinerules/workflows/brainstorm.md` |
 | `workflows/write-plan.md` | `.clinerules/workflows/write-plan.md` |
 | `workflows/execute-plan.md` | `.clinerules/workflows/execute-plan.md` |
+| `hooks/TaskStart` (bash, this branch only) | `.clinerules/hooks/TaskStart` |
+| `hooks/TaskStart.ps1` (PowerShell, this branch only) | `.clinerules/hooks/TaskStart.ps1` |
 | Each subfolder of `skills/` (entire folder) | `.cline/skills/<same-name>/` |
+
+On `main` branch the `hooks/` rows are absent — skip those.
+
+**Important:** after copying `TaskStart` on macOS/Linux, mark it executable:
+```bash
+chmod +x .clinerules/hooks/TaskStart
+```
 
 There are **13 skill folders** to copy:
 
