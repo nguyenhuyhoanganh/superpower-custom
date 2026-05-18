@@ -32,6 +32,22 @@ check_link() {
 # Bootstrap
 check_link "$SOURCE_DIR/rules/00-bootstrap.md" "$RULES_DIR/00-bootstrap.md"
 
+# Memory-bank rule (this branch)
+mb_present=0
+mb_rule_src="$SOURCE_DIR/rules/02-memory-bank.md"
+if [ -f "$mb_rule_src" ]; then
+  mb_rule_link="$RULES_DIR/02-memory-bank.md"
+  if [ ! -L "$mb_rule_link" ]; then
+    echo "MISSING symlink: $mb_rule_link"
+    problems=$((problems + 1))
+  elif [ ! -e "$mb_rule_link" ]; then
+    echo "BROKEN symlink: $mb_rule_link -> $(readlink "$mb_rule_link")"
+    problems=$((problems + 1))
+  else
+    mb_present=1
+  fi
+fi
+
 # Workflows
 for wf in brainstorm write-plan execute-plan; do
   check_link "$SOURCE_DIR/workflows/$wf.md" "$WORKFLOWS_DIR/$wf.md"
@@ -54,10 +70,10 @@ if [ -d "$SKILLS_DIR" ]; then
 fi
 
 skill_count=$(find "$SKILLS_DIR" -mindepth 1 -maxdepth 1 -type l 2>/dev/null | wc -l | tr -d ' ')
-total=$((1 + 3 + skill_count))
+total=$((1 + mb_present + 3 + skill_count))
 
 if [ "$problems" -eq 0 ]; then
-  echo "OK: $total symlinks installed (1 rule + 3 workflows + $skill_count skills)"
+  echo "OK: $total symlinks installed (1 bootstrap rule + $mb_present memory-bank rule + 3 workflows + $skill_count skills)"
   exit 0
 else
   echo "FAIL: $problems problem(s) found"

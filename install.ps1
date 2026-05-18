@@ -20,6 +20,12 @@ if (Test-Path $bootstrapSource) {
     Copy-Item -Force $bootstrapSource (Join-Path $RulesDir '00-bootstrap.md')
 }
 
+# 1b. Memory-bank rule (copy, this branch)
+$mbRuleSource = Join-Path $SourceDir 'rules\02-memory-bank.md'
+if (Test-Path $mbRuleSource) {
+    Copy-Item -Force $mbRuleSource (Join-Path $RulesDir '02-memory-bank.md')
+}
+
 # 2. Workflows (copy)
 foreach ($wf in 'brainstorm', 'write-plan', 'execute-plan') {
     $src = Join-Path $SourceDir "workflows\$wf.md"

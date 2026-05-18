@@ -17,6 +17,12 @@ if [ -f "$SOURCE_DIR/rules/00-bootstrap.md" ]; then
   ln -sfn "$SOURCE_DIR/rules/00-bootstrap.md" "$RULES_DIR/00-bootstrap.md"
 fi
 
+# 1b. Memory-bank rule (this branch)
+mb_rule_src="$SOURCE_DIR/rules/02-memory-bank.md"
+if [ -f "$mb_rule_src" ]; then
+  ln -sfn "$mb_rule_src" "$RULES_DIR/02-memory-bank.md"
+fi
+
 # 2. Workflows
 for wf in brainstorm write-plan execute-plan; do
   if [ -f "$SOURCE_DIR/workflows/$wf.md" ]; then

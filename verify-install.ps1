@@ -34,6 +34,18 @@ function Test-FileCopy {
 # Bootstrap
 Test-FileCopy -Source (Join-Path $SourceDir 'rules\00-bootstrap.md') -Target (Join-Path $RulesDir '00-bootstrap.md')
 
+# Memory-bank rule (this branch)
+$mbPresent = 0
+$mbRuleSrc = Join-Path $SourceDir 'rules\02-memory-bank.md'
+if (Test-Path $mbRuleSrc) {
+    $mbRuleTgt = Join-Path $RulesDir '02-memory-bank.md'
+    $beforeProblems = $script:problems
+    Test-FileCopy -Source $mbRuleSrc -Target $mbRuleTgt
+    if ($script:problems -eq $beforeProblems -and (Test-Path $mbRuleTgt)) {
+        $mbPresent = 1
+    }
+}
+
 # Workflows
 foreach ($wf in 'brainstorm', 'write-plan', 'execute-plan') {
     Test-FileCopy -Source (Join-Path $SourceDir "workflows\$wf.md") -Target (Join-Path $WorkflowsDir "$wf.md")
@@ -73,9 +85,9 @@ if (Test-Path $skillsSourceDir) {
     }
 }
 
-$total = 1 + 3 + $skillCount
+$total = 1 + $mbPresent + 3 + $skillCount
 if ($script:problems -eq 0) {
-    Write-Host "OK: $total items installed (1 rule + 3 workflows + $skillCount skills, mixed copy+junction)"
+    Write-Host "OK: $total items installed (1 bootstrap rule + $mbPresent memory-bank rule + 3 workflows + $skillCount skills, mixed copy+junction)"
     exit 0
 } else {
     Write-Host "FAIL: $($script:problems) problem(s) found"

@@ -19,6 +19,13 @@ if (Test-Path $bootstrap) {
     $removed++
 }
 
+# Memory-bank rule (this branch)
+$mbRule = Join-Path $RulesDir '02-memory-bank.md'
+if (Test-Path $mbRule) {
+    Remove-Item -Force $mbRule
+    $removed++
+}
+
 # Workflows
 foreach ($wf in 'brainstorm', 'write-plan', 'execute-plan') {
     $p = Join-Path $WorkflowsDir "$wf.md"
