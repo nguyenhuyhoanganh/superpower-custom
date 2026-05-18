@@ -8,13 +8,23 @@ subagents.
 
 From the workspace root that contains this repo:
 
+**macOS / Linux (bash):**
+
 ```bash
 ./superpower-custom/install.sh
 ```
 
-This creates symlinks in `.clinerules/`, `.clinerules/workflows/`, and
-`.cline/skills/` pointing into this repo. Edit the source here and Cline
-sees the update on the next turn.
+**Windows (PowerShell):**
+
+```powershell
+.\superpower-custom\install.ps1
+```
+
+The macOS/Linux installer uses symlinks, so edits to source files are
+picked up live. The Windows installer uses junctions for skill folders
+(live update) plus file copies for the bootstrap rule and 3 workflows
+(re-run install after editing source). See [INSTALL.md](INSTALL.md) for
+the full Windows-specific notes.
 
 ## Layout
 
