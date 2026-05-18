@@ -2,8 +2,9 @@
 
 ## Prerequisites
 
-- macOS or Linux (Windows symlinks need `mklink`; not supported in this version)
-- Bash 4+
+- One of:
+  - macOS / Linux with Bash 4+
+  - Windows 10/11 with PowerShell 5.1 (built-in)
 - Git
 - Cline VSCode extension installed
 
