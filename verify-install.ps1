@@ -34,6 +34,18 @@ function Test-FileCopy {
 # Bootstrap
 Test-FileCopy -Source (Join-Path $SourceDir 'rules\00-bootstrap.md') -Target (Join-Path $RulesDir '00-bootstrap.md')
 
+# Inline using-superpowers (this branch)
+$inlinePresent = 0
+$inlineSkillSrc = Join-Path $SourceDir 'skills\using-superpowers\SKILL.md'
+if (Test-Path $inlineSkillSrc) {
+    $inlineRule = Join-Path $RulesDir '01-using-superpowers.md'
+    $beforeProblems = $script:problems
+    Test-FileCopy -Source $inlineSkillSrc -Target $inlineRule
+    if ($script:problems -eq $beforeProblems -and (Test-Path $inlineRule)) {
+        $inlinePresent = 1
+    }
+}
+
 # Workflows
 foreach ($wf in 'brainstorm', 'write-plan', 'execute-plan') {
     Test-FileCopy -Source (Join-Path $SourceDir "workflows\$wf.md") -Target (Join-Path $WorkflowsDir "$wf.md")
@@ -73,9 +85,9 @@ if (Test-Path $skillsSourceDir) {
     }
 }
 
-$total = 1 + 3 + $skillCount
+$total = 1 + $inlinePresent + 3 + $skillCount
 if ($script:problems -eq 0) {
-    Write-Host "OK: $total items installed (1 rule + 3 workflows + $skillCount skills, mixed copy+junction)"
+    Write-Host "OK: $total items installed (1 rule + $inlinePresent inline-skill-rule + 3 workflows + $skillCount skills, mixed copy+junction)"
     exit 0
 } else {
     Write-Host "FAIL: $($script:problems) problem(s) found"

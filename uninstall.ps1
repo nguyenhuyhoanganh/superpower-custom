@@ -19,6 +19,13 @@ if (Test-Path $bootstrap) {
     $removed++
 }
 
+# Inline using-superpowers (this branch)
+$inlineRule = Join-Path $RulesDir '01-using-superpowers.md'
+if (Test-Path $inlineRule) {
+    Remove-Item -Force $inlineRule
+    $removed++
+}
+
 # Workflows
 foreach ($wf in 'brainstorm', 'write-plan', 'execute-plan') {
     $p = Join-Path $WorkflowsDir "$wf.md"

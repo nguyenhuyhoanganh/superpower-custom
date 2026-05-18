@@ -1,5 +1,11 @@
 # Installation Guide
 
+> **This is the `inline-superpowers` branch.** It adds a second
+> always-loaded rule `.clinerules/01-using-superpowers.md` that contains
+> the full `using-superpowers` skill content. Token-expensive (~1000 tokens
+> per turn) but guarantees the agent sees the skills system every turn.
+> If you are on `main`, only the short bootstrap rule is loaded.
+
 ## Prerequisites
 
 - One of:
@@ -103,6 +109,71 @@ Prefer `install.ps1` unless you already have that set up.
   on the same Windows drive (junctions cannot cross drives).
 - `install.bat` (cmd.exe only) is not provided — PowerShell is required.
 
+## Inline-superpowers rule (this branch only)
+
+This branch adds one extra symlink/copy beyond `main`:
+
+```
+<workspace>/.clinerules/01-using-superpowers.md
+    →  superpower-custom/skills/using-superpowers/SKILL.md
+```
+
+Cline reads every `.md` file under `.clinerules/` and appends it to the
+system prompt on every turn. So putting the skill content there means
+the agent sees the full `using-superpowers` skill on every turn —
+guaranteed, with no reliance on `use_skill` discovery.
+
+### When to switch to this branch
+
+Default behavior (`main` branch) loads only the short bootstrap rule
+and trusts the agent to call `use_skill('using-superpowers')` itself.
+Switch to `inline-superpowers` if you notice:
+
+- Agent ignores `using-superpowers` even with `with-hooks` enabled
+- Agent forgets the skills system mid-conversation
+- You want the strongest guarantee at the cost of ~1000 tokens per turn
+
+This is the most aggressive fallback. Try `main` first, then `with-hooks`,
+then this branch.
+
+### Switch and install
+
+```bash
+# macOS / Linux
+git checkout inline-superpowers
+./superpower-custom/install.sh
+
+# Windows
+git checkout inline-superpowers
+.\superpower-custom\install.ps1
+```
+
+Verify expects **18 items** on this branch (vs. 17 on `main`):
+`OK: 18 symlinks installed (1 rule + 1 inline-skill-rule + 3 workflows + 13 skills)`.
+
+### Switching back to main
+
+```bash
+./superpower-custom/uninstall.sh    # or .\superpower-custom\uninstall.ps1
+git checkout main
+./superpower-custom/install.sh      # or .\superpower-custom\install.ps1
+```
+
+Always uninstall before switching, so `01-using-superpowers.md` is
+cleaned up. `main` branch's installer doesn't know about it.
+
+### Trade-off vs `with-hooks`
+
+| Aspect | `with-hooks` | `inline-superpowers` |
+|---|---|---|
+| Mechanism | Hook script injects content at task start | Rule file appended to system prompt every turn |
+| Token cost | One injection per task | ~1000 tokens × every turn |
+| Reliability | Depends on Cline VSCode firing TaskStart hook | Depends on Cline reading `.clinerules/*.md` (well-supported) |
+| Visibility | Hidden in hook output | Visible in system prompt |
+
+Pick `with-hooks` first; pick `inline-superpowers` only if hooks don't
+fire or you want guaranteed every-turn visibility.
+
 ## Manual Installation (no scripts)
 
 If you cannot run `install.sh` / `install.ps1` (restricted environment,
@@ -116,10 +187,13 @@ is exactly the same as what the scripts produce.
 | Copy from (in `superpower-custom/`) | Copy to (under `<workspace>/`) |
 |---|---|
 | `rules/00-bootstrap.md` | `.clinerules/00-bootstrap.md` |
+| `skills/using-superpowers/SKILL.md` (this branch only) | `.clinerules/01-using-superpowers.md` |
 | `workflows/brainstorm.md` | `.clinerules/workflows/brainstorm.md` |
 | `workflows/write-plan.md` | `.clinerules/workflows/write-plan.md` |
 | `workflows/execute-plan.md` | `.clinerules/workflows/execute-plan.md` |
 | Each subfolder of `skills/` (entire folder) | `.cline/skills/<same-name>/` |
+
+On `main` branch the `01-using-superpowers.md` row is absent — skip it.
 
 There are **13 skill folders** to copy:
 

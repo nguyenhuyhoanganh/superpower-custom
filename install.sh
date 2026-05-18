@@ -17,6 +17,14 @@ if [ -f "$SOURCE_DIR/rules/00-bootstrap.md" ]; then
   ln -sfn "$SOURCE_DIR/rules/00-bootstrap.md" "$RULES_DIR/00-bootstrap.md"
 fi
 
+# 1b. Inline using-superpowers as a rule (this branch)
+# Cline reads every .md under .clinerules/ on every turn, so this
+# guarantees the skill content is always present in the agent's context.
+inline_skill_src="$SOURCE_DIR/skills/using-superpowers/SKILL.md"
+if [ -f "$inline_skill_src" ]; then
+  ln -sfn "$inline_skill_src" "$RULES_DIR/01-using-superpowers.md"
+fi
+
 # 2. Workflows
 for wf in brainstorm write-plan execute-plan; do
   if [ -f "$SOURCE_DIR/workflows/$wf.md" ]; then

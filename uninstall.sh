@@ -17,6 +17,12 @@ if [ -L "$RULES_DIR/00-bootstrap.md" ]; then
   removed=$((removed + 1))
 fi
 
+# Inline using-superpowers (this branch)
+if [ -L "$RULES_DIR/01-using-superpowers.md" ]; then
+  rm "$RULES_DIR/01-using-superpowers.md"
+  removed=$((removed + 1))
+fi
+
 # Workflows
 for wf in brainstorm write-plan execute-plan; do
   if [ -L "$WORKFLOWS_DIR/$wf.md" ]; then

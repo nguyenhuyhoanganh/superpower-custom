@@ -20,6 +20,14 @@ if (Test-Path $bootstrapSource) {
     Copy-Item -Force $bootstrapSource (Join-Path $RulesDir '00-bootstrap.md')
 }
 
+# 1b. Inline using-superpowers as a rule (this branch).
+# Cline reads every .md under .clinerules\ on every turn, so this
+# guarantees the skill content is always present in the agent's context.
+$inlineSkillSrc = Join-Path $SourceDir 'skills\using-superpowers\SKILL.md'
+if (Test-Path $inlineSkillSrc) {
+    Copy-Item -Force $inlineSkillSrc (Join-Path $RulesDir '01-using-superpowers.md')
+}
+
 # 2. Workflows (copy)
 foreach ($wf in 'brainstorm', 'write-plan', 'execute-plan') {
     $src = Join-Path $SourceDir "workflows\$wf.md"
