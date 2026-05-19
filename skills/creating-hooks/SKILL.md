@@ -1,6 +1,6 @@
 ---
 name: creating-hooks
-description: Creates new Cline hooks (.clinerules/hooks/<EventName>) that fire on lifecycle events (TaskStart, PreToolUse, PostToolUse, etc.) to inject context, block tool calls, or run side effects. Covers the two hook systems (file-based for VSCode extension vs SDK plugin events for custom agents), event types, JSON stdin/stdout schema, executable file naming, cross-platform variants (bash + PowerShell), and safety considerations.
+description: Creates new Cline hooks (.clinerules/hooks/<EventName>) that fire on lifecycle events (TaskStart, PreToolUse, PostToolUse, etc.) to inject context, block tool calls, or run side effects. Covers event types, JSON stdin/stdout schema, executable file naming, cross-platform variants (bash + PowerShell), and safety considerations.
 ---
 
 # Creating Cline Hooks
@@ -24,15 +24,7 @@ Use this skill when the user wants to wire deterministic logic into Cline's life
 
 Hooks fire automatically and deterministically. If the user can comfortably invoke the logic manually, a workflow is usually simpler and easier to audit.
 
-## Two hook systems — pick the right one
-
-Cline exposes hooks at **two levels**. Use the right one for the user's environment.
-
-### A. File-based hooks (VSCode extension users) — this is the default
-
-Executable scripts at `.clinerules/hooks/<EventName>`. No code build, no npm package — just an executable file the extension runs on the listed lifecycle events. **This is what this skill writes by default.**
-
-Events available to file-based hooks (from the v3.36 release):
+## Supported events
 
 | Event | When it fires | Common use |
 |---|---|---|
@@ -44,36 +36,6 @@ Events available to file-based hooks (from the v3.36 release):
 | `PostToolUse` | A tool call completed | Audit log, learning, side effects |
 
 Event names are **case-sensitive** and must match exactly.
-
-### B. SDK plugin hooks (Cline SDK / custom agents) — richer event surface
-
-If the user is building a custom agent with the [Cline SDK](https://docs.cline.bot/sdk/plugins) (TypeScript `AgentPlugin`), they get a much finer-grained event surface:
-
-**Lifecycle stages** (low-level event names):
-
-| Stage | When it fires |
-|---|---|
-| `input` | Raw input received before any agent processing |
-| `runtime_event` | Generic runtime event channel |
-| `session_start` | Agent session opens |
-| `run_start` | A `run()` call begins |
-| `iteration_start` | One agent iteration (planning + tool call loop) begins |
-| `turn_start` | One conversation turn begins |
-| `before_agent_start` | Just before the agent's first model call — inject context / modify prompt here |
-| `tool_call_before` | Just before a tool executes |
-| `tool_call_after` | After a tool finishes |
-| `turn_end` | Turn complete |
-| `stop_error` | Agent stopped due to an error |
-| `iteration_end` | Iteration complete |
-| `run_end` | `run()` complete — emit metrics, send notifications, cleanup |
-| `session_shutdown` | Session closes |
-| `error` | Unhandled error surfaced |
-
-**High-level handlers** (`AgentPlugin.hooks` object): `beforeRun`, `afterRun`, `beforeModel`, `afterModel`, `beforeTool`, `afterTool`, `onEvent` — these wrap the raw stages for ergonomic plugin code.
-
-**Important:** SDK plugin hooks are **TypeScript code** distributed as npm packages or local files. They are **not** file-based scripts and they do **not** live in `.clinerules/hooks/`. Choose this path only when the user is building a custom agent with the SDK, not when they're using the VSCode extension.
-
-This skill writes **file-based hooks (system A)** unless the user explicitly says they're building an SDK plugin. If they ask for an event that only exists in system B (e.g., "fire something on `iteration_end`"), say so and ask whether they want to go the SDK route.
 
 ## Anatomy
 
@@ -251,9 +213,7 @@ Hooks run on **every** matching event with the user's full shell privileges and 
 
 ### 1. Pick the event
 
-Match the user's need to one of the file-based events: `TaskStart` / `TaskResume` / `TaskCancel` / `UserPromptSubmit` / `PreToolUse` / `PostToolUse`.
-
-If the user names an event that only exists in the SDK plugin surface (e.g. `iteration_end`, `before_agent_start`, `session_shutdown`), stop and ask whether they want to write a TypeScript SDK plugin instead. That is a different workflow from this skill — point them at https://docs.cline.bot/sdk/plugins.
+Match the user's need to one of: `TaskStart` / `TaskResume` / `TaskCancel` / `UserPromptSubmit` / `PreToolUse` / `PostToolUse`.
 
 ### 2. Pick the destination
 
