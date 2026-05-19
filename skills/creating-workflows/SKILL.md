@@ -18,7 +18,7 @@ Use this skill when the user wants to capture a repeatable procedure — PR revi
 | "When I ask about Z, follow specialized expert procedure" | **Skill** — see `creating-skills` |
 | "On event E, inject context or block a tool" | **Hook** — see `creating-hooks` |
 
-Workflows consume tokens **only when invoked**. Rules consume tokens **every message**. If the procedure is "first I do X, then Y, then Z," prefer a workflow over a rule. See [Stop adding rules when you need workflows](https://cline.bot/blog/stop-adding-rules-when-you-need-workflows).
+Workflows consume tokens **only when invoked**. Rules consume tokens **every message**. If the procedure is "first I do X, then Y, then Z," prefer a workflow over a rule. See the archived blog post: [references/stop-adding-rules-when-you-need-workflows.md](references/stop-adding-rules-when-you-need-workflows.md) — Nick Baumann's full argument for choosing the workflow side of the trade-off.
 
 ## Anatomy
 
