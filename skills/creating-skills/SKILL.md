@@ -1,251 +1,371 @@
 ---
 name: creating-skills
-description: Use when the user asks to create a new Cline skill, capture a recurring workflow as a reusable skill, or says "make this into a skill" — covers when a skill is worth creating, folder layout, SKILL.md frontmatter, description-writing for discoverability, and installation.
+description: Creates new Cline skills when the user provides source material (code, docs, scripts, references) and asks to package it as a reusable skill. Covers folder layout under .cline/skills/, SKILL.md frontmatter and body, description-writing for discoverability, progressive disclosure, bundled scripts with relative paths and safety checks, and self-review.
 ---
 
 # Creating Cline Skills
 
-A skill is a markdown document Cline loads on demand via `use_skill` to perform a specific task with embedded discipline, process, or domain knowledge. Use this skill when the user wants to turn a workflow into a reusable, agent-invokable skill.
+A skill is a markdown document plus optional supporting files that Cline loads on demand to perform a specific task. Use this skill when the user has handed over source material and asks to package it as a reusable skill.
 
-## When to create a skill (and when not to)
-
-Create a skill when the work is:
-
-- **Repeatable** — the same procedure will be needed again, in different conversations
-- **Disciplined** — there is a right way and a wrong way, and the agent will drift without explicit guardrails (TDD, debugging, code review)
-- **Knowledge-heavy** — it bakes in expert knowledge the agent would otherwise re-derive (framework conventions, deployment rituals, project-specific anti-patterns)
-
-Do **NOT** create a skill for:
-
-- One-off tasks (just do them inline)
-- Pure reference material (a regular markdown doc in the repo is fine)
-- Generic coding tasks the agent already handles (don't wrap routine edits in ceremony)
-
-If unsure, ask the user one question: **"Will you want to use this again, or is this a one-time thing?"** If the answer is "one-time", do the work, don't create a skill.
-
-## Where skills live
+## Anatomy
 
 ```
-<workspace>/.cline/skills/<skill-name>/
-├── SKILL.md             ← required
-└── <supporting-file>.md ← optional: prompt templates, reference docs, long examples
+.cline/skills/<skill-name>/
+├── SKILL.md                ← required
+├── <topic-reference>.md    ← optional: long reference docs, examples, prompt templates
+└── scripts/                ← optional: executable helpers (.py, .js, .sh, ...)
+    └── <script>.{py,js,sh}
 ```
 
-In this project the **source** of every skill is `superpower-custom/skills/<name>/`. The installer (`install.sh` on macOS/Linux, `install.ps1` on Windows) symlinks or junctions each source folder into `<workspace>/.cline/skills/<name>/`.
-
-**Always create new skills in the source folder.** Never edit the copy under `.cline/skills/` directly — on macOS/Linux it is a symlink (so your edit hits the source anyway), and on Windows it is a copy that the next install will overwrite.
-
-## Naming
-
-- Folder name and `name:` field in frontmatter: identical kebab-case strings
-- Prefer verb-based names for action skills: `writing-plans`, `creating-skills`, `debugging-systematically`
-- Noun names are fine for reference-only skills: `testing-anti-patterns`
-- Keep it under ~30 characters
-- Do not prefix with the project name
+The folder name and the `name:` field in the frontmatter must match exactly.
 
 ## SKILL.md format
 
 ```markdown
 ---
 name: <kebab-case-name>
-description: <one or two sentences — see the next section>
+description: <one or two sentences — what + when>
 ---
 
 # <Human-readable title>
 
-<Body content>
+<Body>
 ```
 
-Only two frontmatter fields. The body is regular markdown — headings, lists, code blocks, tables.
+**Frontmatter constraints:**
 
-## The description field (most important part)
+- `name`: ≤64 chars, lowercase letters / numbers / hyphens only, no reserved words (`anthropic`, `claude`)
+- `description`: ≤1024 chars, non-empty, third-person
 
-Cline decides whether to invoke a skill by reading its description. A bad description means the skill never fires.
+The body is regular markdown. Keep it under 500 lines — split into sibling files when it grows beyond that.
 
-A good description states two things:
+## Naming
 
-1. **The trigger** — what the user says, asks for, or is doing that should cause invocation
-2. **The scope** — what the skill covers (and implicitly what it does not)
+Prefer **gerund form** (verb + -ing): `creating-skills`, `analyzing-spreadsheets`, `writing-commit-messages`. Reads naturally as "the skill that ___".
 
-Good examples:
+Acceptable alternatives: noun phrases (`pdf-processing`), imperative (`process-pdfs`). Be consistent within a workspace.
 
-> Use when the user asks to create a new Cline skill or capture a workflow as a reusable skill — covers folder layout, SKILL.md frontmatter, and installation.
+Avoid vague names (`helper`, `utils`, `tools`) and reserved-word prefixes (`anthropic-`, `claude-`).
 
-> Use before writing code for any non-trivial change. Enforces RED-GREEN-REFACTOR: write a failing test, watch it fail, write minimal code to pass, refactor.
+## The description field — most important part
 
-Bad examples:
+Cline picks which skill to invoke by reading descriptions. Write in **third person**, state both **what** the skill does and **when** to use it, and include the terms a user would actually say.
 
-> A skill for testing. ← no trigger, no scope
-> This skill helps with code. ← fires for literally everything
-> TDD ← too terse; agent cannot tell when to use it
+Good:
 
-**Rule of thumb:** if you removed the description and showed only the title, could another agent guess when to invoke? If yes, the title is doing the work the description should do — rewrite the description to be specific.
+> Extracts text and tables from PDF files, fills forms, merges documents. Use when the user mentions PDFs, scanned documents, or form extraction.
+
+> Generates conventional commit messages from staged diffs. Use when the user asks to commit, write a commit message, or review staged changes.
+
+Bad:
+
+> I can help you with PDFs. ← first-person
+> A skill for code. ← no scope, no trigger
+> processing ← no information
+
+**Test:** if you deleted the description and left only the title, could a fresh Cline guess when to invoke? If yes, the description is dead weight — rewrite it.
 
 ## Body structure
 
-There is no fixed template, but most action skills benefit from this shape:
+Most action-skills follow this shape:
 
-1. **One-paragraph overview** — what the skill does, when to invoke
-2. **When to use / when NOT to use** — guard against over-application
-3. **The process** — numbered or bulleted steps. Concrete: file paths, commands, expected output
-4. **Anti-patterns** — common ways the agent goes wrong, with the corrected behavior (a table works well)
-5. **Example walkthrough** — one realistic end-to-end scenario (optional but high value)
+1. **One-paragraph overview** — what + when
+2. **Process** — numbered steps with concrete commands, paths, expected output
+3. **Templates / examples** — input/output pairs when the output format matters
+4. **Anti-patterns** — common ways the agent gets it wrong, with the correction
+5. **References to sibling files** — for long reference docs, prompt templates, or worked examples
 
-Reference-only skills (no procedure, just knowledge) can skip steps 3 and 5.
+Reference-only skills (knowledge, no procedure) can skip 2 and 3.
 
-A skill longer than ~300 lines is usually doing too much — split it, or move bulk content to a supporting file.
+## Progressive disclosure
+
+When SKILL.md grows past ~500 lines, move detail into sibling files and link from SKILL.md. Cline loads them only when the relevant section is reached.
+
+```
+my-skill/
+├── SKILL.md              # overview + navigation
+├── advanced-usage.md     # detailed workflows
+├── api-reference.md      # method-by-method reference
+└── examples.md           # end-to-end examples
+```
+
+Keep references **one level deep** — `SKILL.md → a.md`. Do not chain `SKILL.md → a.md → b.md → c.md`; Cline may preview nested files partially and miss content.
+
+For sibling files longer than ~100 lines, put a table of contents at the top so Cline sees the full scope on a partial read.
 
 ## Writing style
 
-- **Imperative voice.** "Run X", "Write the failing test." Not "you should consider running X."
-- **Concrete over abstract.** Exact commands, exact paths, exact strings the agent will type or see.
-- **Show, do not tell.** Code blocks with realistic examples beat prose descriptions every time.
-- **No filler.** Every paragraph should teach something the agent does not already know from its base training.
-- **Name anti-patterns explicitly.** "Do not X" lands better than hoping the agent infers it.
+- **Third person.** "Generates commit messages..." — not "I generate..." or "You can use this to..."
+- **Imperative in the body.** "Run X", "Open the file", "Verify the output."
+- **Concrete over abstract.** Exact commands, exact paths, exact strings.
+- **No filler.** Only include context Cline does not already have. "PDF is a document format..." is filler.
+- **Consistent terminology.** Pick one word (`field`, `endpoint`, `extract`) and use it throughout.
+- **No time-sensitive claims.** "As of 2026..." rots. Put legacy info under an explicit "Old patterns" subheading.
 
-## Process — from user request to installed skill
+## Portability
 
-### Step 1: Confirm it should be a skill
+A skill must run on **any machine, for any user**, not just the author's. This rules out anything tied to one environment:
 
-Ask: "Will you want to use this again?" If no, do the task inline and stop.
+- **No personal absolute paths.** `/Users/alice/...`, `/home/bob/...`, `C:\Users\hoanganh\...` — all forbidden, in SKILL.md and inside scripts.
+- **No author-specific tools as hard requirements.** If a step needs `jq`, `gh`, `rg`, or a specific Python version, state the dependency at the top of SKILL.md and fail with a clear message when it is missing.
+- **No OS-only assumptions.** If a step works only on macOS / only on Windows, say so and provide the alternative — or ship parallel scripts (`tag.sh` + `tag.ps1`).
+- **No machine-specific config baked in.** API keys, hostnames, usernames, project IDs: read them from env vars or arguments, never hardcode.
+- **No reliance on `cwd` being the project root** unless the skill explicitly states "run from the project root". When in doubt, resolve paths from the script's own location (see below).
 
-### Step 2: Clarify the trigger and scope (one question at a time)
+Test mentally: "If I emailed this skill folder to a colleague with a fresh checkout, would it work without edits?" If no, fix it.
 
-- What event or user-request should make me invoke this?
-- What is the discipline, process, or knowledge it should encode?
-- What goes wrong without it?
+## Bundled scripts
 
-If the answer to the last question is vague, the skill is probably not worth creating yet — wait until there is a real pain point.
+Skills can ship executable helpers (Python, JavaScript, shell). Cline runs them via `execute_command`. These rules keep them portable and safe.
 
-### Step 3: Check for overlap
+### Forward slashes, paths relative to the skill folder
 
-```bash
-ls superpower-custom/skills/
-```
-
-If an existing skill covers part of the territory, extend it instead of creating a new one. Fragmented knowledge is harder to invoke correctly.
-
-### Step 4: Choose a name and create the folder
-
-```
-superpower-custom/skills/<kebab-case-name>/SKILL.md
-```
-
-### Step 5: Draft SKILL.md
-
-Write the frontmatter first — **especially the description**, because that is what determines whether the skill ever gets used. Then write the body following the structure guidance above.
-
-### Step 6: Self-review
-
-Read your draft as a fresh agent would, with no memory of this conversation:
-
-- Does the description make the trigger obvious?
-- Are the steps concrete enough to follow without guessing?
-- Have you given concrete examples for anything ambiguous?
-- Could any section be shorter? Cut filler.
-- Have you marked anti-patterns explicitly?
-
-Fix issues inline; no need to re-review.
-
-### Step 7: Install
+In SKILL.md, reference scripts relative to the skill folder root:
 
 ```bash
-cd <workspace>
-./superpower-custom/install.sh        # macOS / Linux / Git Bash
-# or
-.\superpower-custom\install.ps1       # Windows PowerShell
+# good
+python scripts/extract.py input.pdf
+
+# bad — absolute, breaks the moment the skill is copied elsewhere
+python /Users/alice/workspace/.cline/skills/my-skill/scripts/extract.py input.pdf
 ```
 
-The installer auto-discovers every folder under `superpower-custom/skills/` — no editing of the script needed.
+Use forward slashes on every platform — backslashes break on Unix, forward slashes work everywhere.
 
-### Step 8: Verify
+### Inside scripts, resolve paths from the script's own location
+
+Hardcoded absolute paths make scripts unusable when the skill is copied to another workspace. Resolve from the script's location:
+
+```python
+# Python
+from pathlib import Path
+SCRIPT_DIR = Path(__file__).resolve().parent
+TEMPLATE = SCRIPT_DIR.parent / "templates" / "report.md"
+```
 
 ```bash
-./superpower-custom/verify-install.sh
+# Bash
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+TEMPLATE="$SCRIPT_DIR/../templates/report.md"
 ```
 
-Confirm the new skill appears in the count.
+```javascript
+// Node
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
+const TEMPLATE = join(SCRIPT_DIR, '..', 'templates', 'report.md');
+```
 
-### Step 9: Smoke-test
+### Stay inside the workspace
 
-In a fresh Cline turn, describe a situation matching your trigger and confirm Cline invokes `use_skill <name>` (or at least mentions the skill). If it does not fire, the description is wrong — rewrite it to be more specific about the trigger.
+Scripts must not modify, delete, or create files outside the current workspace. Before any destructive operation (write, delete, rename), verify the resolved target path is inside the workspace. Use `pathlib` so the check works identically on Windows, macOS, and Linux:
+
+```python
+from pathlib import Path
+
+def assert_in_workspace(target_path: str, workspace: Path | None = None) -> Path:
+    workspace = (workspace or Path.cwd()).resolve()
+    target = Path(target_path).resolve()
+    if target != workspace and workspace not in target.parents:
+        raise SystemExit(f"refusing to write outside workspace: {target}")
+    return target
+```
+
+Equivalents in other languages:
+
+```javascript
+// Node
+import { resolve, relative } from 'node:path';
+function assertInWorkspace(target, workspace = process.cwd()) {
+  const rel = relative(resolve(workspace), resolve(target));
+  if (rel.startsWith('..') || resolve(target) === resolve(workspace) + '..') {
+    throw new Error(`refusing to write outside workspace: ${target}`);
+  }
+}
+```
+
+```bash
+# Bash (works on macOS BSD + Linux GNU + Git Bash on Windows)
+assert_in_workspace() {
+  local target ws
+  target="$(cd "$(dirname "$1")" 2>/dev/null && pwd)/$(basename "$1")"
+  ws="$(pwd)"
+  case "$target" in
+    "$ws"|"$ws"/*) ;;
+    *) echo "refusing to write outside workspace: $target" >&2; exit 1 ;;
+  esac
+}
+```
+
+Never run `rm -rf`, `git reset --hard`, package installs, or network calls without an explicit user instruction in the skill body.
+
+### Handle errors instead of punting
+
+Scripts solve problems they encounter; they do not crash and leave Cline to guess:
+
+```python
+# good
+def read_config(path):
+    try:
+        return json.loads(Path(path).read_text())
+    except FileNotFoundError:
+        print(f"{path} missing; using defaults")
+        return DEFAULT_CONFIG
+    except json.JSONDecodeError as e:
+        raise SystemExit(f"{path} is not valid JSON: {e}")
+
+# bad — punts to the agent
+def read_config(path):
+    return json.loads(open(path).read())
+```
+
+No magic numbers — every non-obvious constant gets a comment explaining the value:
+
+```python
+# 30s covers slow networks; tighten if responses are usually <5s
+REQUEST_TIMEOUT = 30
+```
+
+### Ship a test transcript
+
+For every script the skill ships, document a known-good run: input, command, expected output. This is the agent-readable equivalent of a unit test and lets a later reader verify the script still behaves the same.
+
+Format inside SKILL.md (or in a sibling `TEST_TRANSCRIPT.md` for longer cases):
+
+````markdown
+### Test transcript: scripts/extract.py
+
+Input: `tests/fixtures/sample.pdf` (3-page invoice, EN)
+
+```bash
+$ python scripts/extract.py tests/fixtures/sample.pdf
+Extracted 3 pages, 412 tokens.
+Wrote: tests/fixtures/sample.txt
+```
+
+Expected: exit 0; `sample.txt` first line is `Invoice #1042`.
+````
+
+Run the transcript once when authoring. Re-run after any script edit. If the output drifts, fix the script or update the transcript — never let them diverge silently.
+
+### Safety checklist before shipping a script
+
+- [ ] No personal / absolute paths inside the script (`/Users/...`, `C:\...`)
+- [ ] All file operations confined to the workspace
+- [ ] External tool dependencies (`jq`, `gh`, etc.) documented and checked at startup
+- [ ] Forward slashes everywhere; cross-platform path resolution (pathlib / `dirname`)
+- [ ] Errors handled with helpful messages, not stack traces
+- [ ] No magic numbers without a comment
+- [ ] No network calls / package installs / destructive shell commands without explicit user opt-in
+- [ ] Test transcript runs and matches documented output
 
 ## Anti-patterns
 
 | Anti-pattern | What to do instead |
 |---|---|
-| Description that says what the skill *is* | Describe when to *use* it — the trigger and scope |
-| One giant wall of prose | Use headings, numbered steps, tables, code blocks |
-| Explains general programming concepts | Skip it — the agent already knows. Skills are for project-specific or discipline-enforcing content |
-| Duplicates an existing skill | Extend the existing skill; do not fragment knowledge |
-| 20+ steps with no structure | Split into multiple skills, or factor reference material into supporting `.md` files |
-| Editing the symlinked copy under `.cline/skills/` | Always edit the source in `superpower-custom/skills/` |
-| Vague verbs ("handle", "manage", "deal with") | Use concrete verbs ("write", "run", "verify", "commit") |
-| Conditional logic the agent has to puzzle out | Numbered steps with explicit "if X, then Y" branches |
+| Description that names what the skill *is* | Describe when to *invoke* it — trigger + scope |
+| First-person description ("I can help...") | Third-person ("Generates...", "Extracts...") |
+| Walls of prose | Headings, numbered steps, tables, code blocks |
+| Explaining general programming concepts | Skip — Cline already knows |
+| Duplicating an existing skill | Extend the existing skill; do not fragment knowledge |
+| 20+ unstructured steps | Split into multiple skills, or factor into sibling files |
+| Vague verbs ("handle", "manage", "deal with") | Concrete verbs ("write", "validate", "commit") |
+| Backslashes in paths | Forward slashes everywhere |
+| Multiple library choices presented as equals | Pick one default; mention alternatives only when meaningful |
+| Time-sensitive claims | Mark legacy info under an "Old patterns" subheading |
+| Hardcoded absolute paths in scripts | Resolve from `__file__` / `$(dirname "$0")` / `import.meta.url` |
+| Personal paths (`/Users/alice/...`, `C:\Users\bob\...`) | Workspace-relative paths or env-driven config |
+| OS-only step with no alternative | State the requirement, or ship parallel `.sh` + `.ps1` |
+| Hardcoded API keys, hostnames, project IDs | Read from env vars or script arguments |
 
-## Supporting files (optional)
+## Process — from user direction to written skill
 
-If a skill needs long reference material, prompt templates, or examples that would bloat SKILL.md, put them in sibling files:
+The user has already handed over source material and asked for a skill. Do not ask whether it should be a skill — they have decided.
 
-```
-skills/my-skill/
-├── SKILL.md
-├── prompt-template.md
-└── reference-patterns.md
-```
+### 1. Restate the trigger in one sentence
 
-In SKILL.md, refer to them with their basename — the agent will Read them on demand. Examples in this project: `skills/subagent-driven-development/researcher-prompt.md`, `skills/test-driven-development/testing-anti-patterns.md`.
+Silently complete: "This skill should fire when the user ___." If that sentence is unclear, ask one short clarifying question. Otherwise proceed.
 
-Keep SKILL.md itself short and procedural; push depth into supporting files.
+### 2. Pick a name
+
+Gerund-form, kebab-case, ≤64 chars. Example: `migrating-legacy-routes`, not `legacy-route-migrator-tool`.
+
+### 3. Check for overlap
+
+List existing skills in `.cline/skills/` using whichever tool Cline has available on this platform (`list_files`, `ls`, `Get-ChildItem`). If a related skill exists, prefer extending it (new section or sibling file) over creating a near-duplicate.
+
+### 4. Lay out the folder
+
+Create `.cline/skills/<name>/SKILL.md`. Add `scripts/` and reference `.md` files only when they are actually needed — do not pre-create empty folders.
+
+### 5. Write the frontmatter first
+
+Especially the description. If it does not name the trigger and scope, rewrite before going further. The body will not save a vague description.
+
+### 6. Draft the body
+
+Follow the body structure section above. Stay under 500 lines.
+
+### 7. If shipping scripts, follow the script rules
+
+Relative paths, workspace-bounded, error-handled, test transcript included.
+
+### 8. Self-review
+
+Read the draft as a fresh Cline session would, with no memory of this conversation:
+
+- Could a different agent invoke this from the description alone?
+- Are the steps concrete enough to follow without inferring?
+- Would the skill work for a colleague on a different OS with a fresh checkout? (No personal paths, no hidden tool requirements, no hardcoded config.)
+- Is anything in here Cline already knows? Cut it.
+- Could any section be shorter?
+- Are anti-patterns marked explicitly, not just implied?
+
+Fix issues inline. Done.
+
+### 9. Tell the user what to do next
+
+Confirm the file path. Suggest a fresh Cline turn that matches the trigger phrasing, so the user can verify invocation.
 
 ## Example walkthrough
 
-**User:** "I keep telling you to update CHANGELOG.md whenever you bump a version in package.json. Make that a skill."
+**User:** "I've shown you our git-tagging convention (date-version-suffix) and the release-checklist.md. Make me a skill that walks through cutting a release."
 
-**Step 1 — confirm:** "Will this come up again?" → "Yes, every release."
+**1. Trigger:** "User says 'cut a release', 'tag a release', or 'prepare release'."
 
-**Step 2 — clarify trigger:** "Trigger fires on any `version:` change in `package.json`, correct?" → "Yes."
+**2. Name:** `cutting-releases`
 
-**Step 3 — check overlap:** `ls superpower-custom/skills/` shows no changelog-related skill.
+**3. Overlap:** `ls .cline/skills/` — no existing release skill.
 
-**Step 4 — name and location:** `superpower-custom/skills/updating-changelog/SKILL.md`
+**4. Layout:**
 
-**Step 5 — draft:**
-
-```markdown
----
-name: updating-changelog
-description: Use whenever changing the `version` field in `package.json` or preparing a release commit — ensures CHANGELOG.md gains a matching entry in Keep-a-Changelog format before the commit lands.
----
-
-# Updating the Changelog
-
-When `version` in `package.json` changes, `CHANGELOG.md` must gain a matching
-`## [<version>] - <YYYY-MM-DD>` section in the same commit.
-
-## Process
-
-1. Read the proposed new version from the staged `package.json` change.
-2. Open `CHANGELOG.md` and locate `## [Unreleased]`.
-3. Rename `## [Unreleased]` to `## [<new-version>] - <today>` and insert a
-   fresh empty `## [Unreleased]` section above it.
-4. Verify each bullet under the new version matches a commit since the last
-   release. Add any missing entries.
-5. Stage both files in one commit: `git add package.json CHANGELOG.md`.
-
-## Anti-patterns
-
-- Bumping version without touching CHANGELOG → release CI fails.
-- Leaving stale "Unreleased" bullets that do not match commits → confuses users.
+```
+.cline/skills/cutting-releases/
+├── SKILL.md
+└── scripts/
+    └── tag.sh
 ```
 
-**Step 6 — self-review:** Description names the trigger (`version` change) and scope (CHANGELOG entry). Steps are concrete. Ship it.
+**5. Frontmatter:**
 
-**Step 7-8 — install and verify:**
-
-```bash
-./superpower-custom/install.sh
-./superpower-custom/verify-install.sh
+```yaml
+---
+name: cutting-releases
+description: Cuts a tagged release following the date-version-suffix convention. Use when the user asks to cut, tag, or prepare a release, or to ship a new version.
+---
 ```
 
-**Step 9 — smoke-test:** Next session, edit `package.json` version. Cline should now invoke `updating-changelog` automatically.
+**6. Body:** procedure pulled from `release-checklist.md`, condensed into 5 numbered steps with the exact `git` commands.
+
+**7. Script `scripts/tag.sh`:**
+- Resolves paths from `$(dirname "$0")`
+- Refuses to run outside a git repo
+- Aborts if the working tree is dirty
+- Prints the planned tag and waits for `y` before pushing
+
+Test transcript: runs against `tests/fixtures/repo-clean/`, prints `would tag: 2026-05-19-v1.2.0`, exits 0 on `n`.
+
+**8. Self-review:** description names trigger ✓, steps concrete ✓, no filler ✓.
+
+**9. Next step:** "Skill at `.cline/skills/cutting-releases/`. Next time you say 'cut a release', Cline should invoke it."
