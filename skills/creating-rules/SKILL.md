@@ -18,7 +18,7 @@ Before writing a rule, confirm it is the right tool:
 | "When I ask about Z, follow this specialized procedure" | **Skill** — see `creating-skills` |
 | "On event E (task start, tool use), inject context or block" | **Hook** — see `creating-hooks` |
 
-Rules drain context on every message. **Default to a workflow or skill if the guidance is procedural or task-specific.** See the Cline blog: ["Stop adding rules when you need workflows"](https://cline.bot/blog/stop-adding-rules-when-you-need-workflows).
+Rules drain context on every message. **Default to a workflow or skill if the guidance is procedural or task-specific.** See the archived Cline blog post: [references/stop-adding-rules-when-you-need-workflows.md](references/stop-adding-rules-when-you-need-workflows.md) — read it when the user is on the fence about which artifact to write.
 
 ## Anatomy
 
