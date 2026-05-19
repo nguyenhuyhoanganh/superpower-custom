@@ -17,6 +17,15 @@ never inherit their conversation history.
 
 **Core principle:** Researcher → main-agent implements → spec reviewer → quality reviewer.
 
+## Plan format detection
+
+Before starting, identify which format the plan uses:
+
+- **Single-file plan** — one `.md` file. Read it once; for each task, paste the task's text into the dispatch prompts below.
+- **Multi-file plan** — a folder with `README.md` + `task-NN-<slug>.md` files. Read `README.md` to orient. For each task, open exactly `task-NN-<slug>.md`, paste its content into the dispatch prompts, and stop referencing it once the task is committed.
+
+In either case, **paste the task text into the subagent prompt** — do not make the subagent open the plan file. Read it yourself, copy the bytes the subagent needs.
+
 ## When to Use
 
 - After `/execute-plan` and the user chose subagent-driven mode
@@ -31,12 +40,18 @@ never inherit their conversation history.
 
 For each task in the plan:
 
+### 0. OPEN THE TASK (main agent)
+
+For multi-file plans, open `task-NN-<slug>.md` now and read it fully. This is the
+only task file you keep open during this loop iteration. For single-file plans,
+locate the task block and copy its text into a local note.
+
 ### 1. RESEARCH PHASE (subagent)
 
 Dispatch a Cline subagent using the template at `researcher-prompt.md`,
 filled with:
-- The full text of the task from the plan (paste it; do not make the
-  subagent open the plan file).
+- The full text of the task (paste it; do not make the subagent open the
+  plan file or folder).
 - Architectural context (where this task fits, what depends on it).
 - Specific research questions if any.
 
@@ -90,7 +105,9 @@ fixes. Loop until quality is acceptable.
 
 ### 5. Mark task complete
 
-Update your progress tracking. Move to the next task.
+Update your progress tracking. (Multi-file plan: stop referencing
+`task-NN-<slug>.md` from now on — it is done. Open the next task file
+in the next iteration.) Move to the next task.
 
 ## Handling Subagent Status
 
