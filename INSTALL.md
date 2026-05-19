@@ -26,7 +26,7 @@ After install, the following symlinks exist:
 <workspace>/.clinerules/workflows/write-plan.md     → superpower-custom/workflows/write-plan.md
 <workspace>/.clinerules/workflows/execute-plan.md   → superpower-custom/workflows/execute-plan.md
 <workspace>/.cline/skills/<skill-name>              → superpower-custom/skills/<skill-name>/
-                                                       (one symlink per skill, 13 total)
+                                                       (one symlink per skill, 14 total)
 ```
 
 ## Verify
@@ -35,7 +35,7 @@ After install, the following symlinks exist:
 ./superpower-custom/verify-install.sh
 ```
 
-Expected: `OK: 17 symlinks installed (1 rule + 3 workflows + 13 skills)`.
+Expected: `OK: 18 symlinks installed (1 rule + 3 workflows + 14 skills)`.
 
 ## Uninstall
 
@@ -121,7 +121,7 @@ is exactly the same as what the scripts produce.
 | `workflows/execute-plan.md` | `.clinerules/workflows/execute-plan.md` |
 | Each subfolder of `skills/` (entire folder) | `.cline/skills/<same-name>/` |
 
-There are **13 skill folders** to copy:
+There are **14 skill folders** to copy:
 
 ```
 using-superpowers/             brainstorming/
@@ -130,7 +130,7 @@ test-driven-development/       systematic-debugging/
 verification-before-completion/  requesting-code-review/
 receiving-code-review/         dispatching-parallel-agents/
 subagent-driven-development/   creating-feature-branch/
-finishing-a-development-branch/
+finishing-a-development-branch/  creating-skills/
 ```
 
 Each skill folder contains a `SKILL.md` plus zero or more supporting files
@@ -184,11 +184,13 @@ cherry-pick files.
         │   └── code-quality-reviewer-prompt.md
         ├── creating-feature-branch/
         │   └── SKILL.md
-        └── finishing-a-development-branch/
+        ├── finishing-a-development-branch/
+        │   └── SKILL.md
+        └── creating-skills/
             └── SKILL.md
 ```
 
-Total: 1 rule + 3 workflow files + 13 skill folders.
+Total: 1 rule + 3 workflow files + 14 skill folders.
 
 ### Quick verify (manual)
 
@@ -197,7 +199,7 @@ Total: 1 rule + 3 workflow files + 13 skill folders.
 ```bash
 test -f .clinerules/00-bootstrap.md && echo "bootstrap OK" || echo "MISSING bootstrap"
 echo "workflows: $(ls .clinerules/workflows/*.md 2>/dev/null | wc -l) (expect 3)"
-echo "skills:    $(ls -d .cline/skills/*/ 2>/dev/null | wc -l) (expect 13)"
+echo "skills:    $(ls -d .cline/skills/*/ 2>/dev/null | wc -l) (expect 14)"
 ```
 
 **Windows PowerShell:**
@@ -205,7 +207,7 @@ echo "skills:    $(ls -d .cline/skills/*/ 2>/dev/null | wc -l) (expect 13)"
 ```powershell
 if (Test-Path .clinerules\00-bootstrap.md) { "bootstrap OK" } else { "MISSING bootstrap" }
 "workflows: $((Get-ChildItem .clinerules\workflows\*.md).Count) (expect 3)"
-"skills:    $((Get-ChildItem .cline\skills -Directory).Count) (expect 13)"
+"skills:    $((Get-ChildItem .cline\skills -Directory).Count) (expect 14)"
 ```
 
 ### Trade-offs vs running the install script
