@@ -12,10 +12,13 @@ A skill is a markdown document plus optional supporting files that Cline loads o
 ```
 .cline/skills/<skill-name>/
 ├── SKILL.md                ← required
-├── <topic-reference>.md    ← optional: long reference docs, examples, prompt templates
+├── references/             ← optional: long reference docs, examples, prompt templates
+│   └── <topic>.md
 └── scripts/                ← optional: executable helpers (.py, .js, .sh, ...)
     └── <script>.{py,js,sh}
 ```
+
+All supporting markdown lives under `references/` — keeps the skill root clean and makes the navigation pattern explicit (SKILL.md is the entry; `references/` holds the depth).
 
 The folder name and the `name:` field in the frontmatter must match exactly.
 
@@ -37,7 +40,7 @@ description: <one or two sentences — what + when>
 - `name`: ≤64 chars, lowercase letters / numbers / hyphens only, no reserved words (`anthropic`, `claude`)
 - `description`: ≤1024 chars, non-empty, third-person
 
-The body is regular markdown. Keep it under 500 lines — split into sibling files when it grows beyond that.
+The body is regular markdown. Keep it under 500 lines — split into files under `references/` when it grows beyond that.
 
 ## Naming
 
@@ -73,25 +76,34 @@ Most action-skills follow this shape:
 2. **Process** — numbered steps with concrete commands, paths, expected output
 3. **Templates / examples** — input/output pairs when the output format matters
 4. **Anti-patterns** — common ways the agent gets it wrong, with the correction
-5. **References to sibling files** — for long reference docs, prompt templates, or worked examples
+5. **Links to `references/`** — for long reference docs, prompt templates, or worked examples
 
 Reference-only skills (knowledge, no procedure) can skip 2 and 3.
 
 ## Progressive disclosure
 
-When SKILL.md grows past ~500 lines, move detail into sibling files and link from SKILL.md. Cline loads them only when the relevant section is reached.
+When SKILL.md grows past ~500 lines, move detail into `references/` and link from SKILL.md. Cline loads each reference file only when the relevant section is reached.
 
 ```
 my-skill/
-├── SKILL.md              # overview + navigation
-├── advanced-usage.md     # detailed workflows
-├── api-reference.md      # method-by-method reference
-└── examples.md           # end-to-end examples
+├── SKILL.md                       # overview + navigation
+└── references/
+    ├── advanced-usage.md          # detailed workflows
+    ├── api-reference.md           # method-by-method reference
+    └── examples.md                # end-to-end examples
 ```
 
-Keep references **one level deep** — `SKILL.md → a.md`. Do not chain `SKILL.md → a.md → b.md → c.md`; Cline may preview nested files partially and miss content.
+In SKILL.md, link with the relative path:
 
-For sibling files longer than ~100 lines, put a table of contents at the top so Cline sees the full scope on a partial read.
+```markdown
+**Advanced workflows:** see [references/advanced-usage.md](references/advanced-usage.md)
+**API reference:**       see [references/api-reference.md](references/api-reference.md)
+**Examples:**            see [references/examples.md](references/examples.md)
+```
+
+Keep links **one level deep** — `SKILL.md → references/a.md`. Do not chain `SKILL.md → references/a.md → references/b.md → references/c.md`; Cline may preview nested files partially and miss content.
+
+For reference files longer than ~100 lines, put a table of contents at the top so Cline sees the full scope on a partial read.
 
 ## Writing style
 
@@ -137,16 +149,16 @@ Use forward slashes on every platform — backslashes break on Unix, forward sla
 Hardcoded absolute paths make scripts unusable when the skill is copied to another workspace. Resolve from the script's location:
 
 ```python
-# Python
+# Python — read a template from references/ next to the skill root
 from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
-TEMPLATE = SCRIPT_DIR.parent / "templates" / "report.md"
+TEMPLATE = SCRIPT_DIR.parent / "references" / "report-template.md"
 ```
 
 ```bash
 # Bash
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-TEMPLATE="$SCRIPT_DIR/../templates/report.md"
+TEMPLATE="$SCRIPT_DIR/../references/report-template.md"
 ```
 
 ```javascript
@@ -154,7 +166,7 @@ TEMPLATE="$SCRIPT_DIR/../templates/report.md"
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
-const TEMPLATE = join(SCRIPT_DIR, '..', 'templates', 'report.md');
+const TEMPLATE = join(SCRIPT_DIR, '..', 'references', 'report-template.md');
 ```
 
 ### Stay inside the workspace
@@ -231,7 +243,7 @@ REQUEST_TIMEOUT = 30
 
 For every script the skill ships, document a known-good run: input, command, expected output. This is the agent-readable equivalent of a unit test and lets a later reader verify the script still behaves the same.
 
-Format inside SKILL.md (or in a sibling `TEST_TRANSCRIPT.md` for longer cases):
+Format inside SKILL.md (or in `references/TEST_TRANSCRIPT.md` for longer cases):
 
 ````markdown
 ### Test transcript: scripts/extract.py
@@ -269,7 +281,7 @@ Run the transcript once when authoring. Re-run after any script edit. If the out
 | Walls of prose | Headings, numbered steps, tables, code blocks |
 | Explaining general programming concepts | Skip — Cline already knows |
 | Duplicating an existing skill | Extend the existing skill; do not fragment knowledge |
-| 20+ unstructured steps | Split into multiple skills, or factor into sibling files |
+| 20+ unstructured steps | Split into multiple skills, or factor into `references/` |
 | Vague verbs ("handle", "manage", "deal with") | Concrete verbs ("write", "validate", "commit") |
 | Backslashes in paths | Forward slashes everywhere |
 | Multiple library choices presented as equals | Pick one default; mention alternatives only when meaningful |
@@ -293,11 +305,11 @@ Gerund-form, kebab-case, ≤64 chars. Example: `migrating-legacy-routes`, not `l
 
 ### 3. Check for overlap
 
-List existing skills in `.cline/skills/` using whichever tool Cline has available on this platform (`list_files`, `ls`, `Get-ChildItem`). If a related skill exists, prefer extending it (new section or sibling file) over creating a near-duplicate.
+List existing skills in `.cline/skills/` using whichever tool Cline has available on this platform (`list_files`, `ls`, `Get-ChildItem`). If a related skill exists, prefer extending it (add a section in SKILL.md or a new file under its `references/`) over creating a near-duplicate.
 
 ### 4. Lay out the folder
 
-Create `.cline/skills/<name>/SKILL.md`. Add `scripts/` and reference `.md` files only when they are actually needed — do not pre-create empty folders.
+Create `.cline/skills/<name>/SKILL.md`. Add `references/` and `scripts/` only when actually needed — do not pre-create empty folders.
 
 ### 5. Write the frontmatter first
 
