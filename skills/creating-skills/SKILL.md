@@ -12,13 +12,21 @@ A skill is a markdown document plus optional supporting files that Cline loads o
 ```
 .cline/skills/<skill-name>/
 ├── SKILL.md                ← required
-├── references/             ← optional: long reference docs, examples, prompt templates
+├── references/             ← optional: long-form docs the agent reads for context
 │   └── <topic>.md
+├── templates/              ← optional: starting-point files (output templates, prompt templates, fixtures)
+│   └── <template>.{md,json,yaml,txt,...}
 └── scripts/                ← optional: executable helpers (.py, .js, .sh, ...)
     └── <script>.{py,js,sh}
 ```
 
-All supporting markdown lives under `references/` — keeps the skill root clean and makes the navigation pattern explicit (SKILL.md is the entry; `references/` holds the depth).
+Three sibling folders, each with a single purpose:
+
+- **`references/`** — markdown the agent **reads** to gain context (API references, worked examples, advanced workflows, design notes). Pure documentation.
+- **`templates/`** — files the agent or a script **uses as a starting point** and fills in (output templates, prompt skeletons, config fixtures). Any format.
+- **`scripts/`** — code the agent **executes** (Python / JS / shell helpers).
+
+Keep the skill root clean — anything beyond `SKILL.md` belongs in one of those three folders.
 
 The folder name and the `name:` field in the frontmatter must match exactly.
 
@@ -76,7 +84,7 @@ Most action-skills follow this shape:
 2. **Process** — numbered steps with concrete commands, paths, expected output
 3. **Templates / examples** — input/output pairs when the output format matters
 4. **Anti-patterns** — common ways the agent gets it wrong, with the correction
-5. **Links to `references/`** — for long reference docs, prompt templates, or worked examples
+5. **Links to `references/`** — for long reference docs and worked examples (templates live in `templates/`)
 
 Reference-only skills (knowledge, no procedure) can skip 2 and 3.
 
@@ -149,16 +157,16 @@ Use forward slashes on every platform — backslashes break on Unix, forward sla
 Hardcoded absolute paths make scripts unusable when the skill is copied to another workspace. Resolve from the script's location:
 
 ```python
-# Python — read a template from references/ next to the skill root
+# Python — read a starter file from templates/ next to the skill root
 from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
-TEMPLATE = SCRIPT_DIR.parent / "references" / "report-template.md"
+TEMPLATE = SCRIPT_DIR.parent / "templates" / "report.md"
 ```
 
 ```bash
 # Bash
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-TEMPLATE="$SCRIPT_DIR/../references/report-template.md"
+TEMPLATE="$SCRIPT_DIR/../templates/report.md"
 ```
 
 ```javascript
@@ -166,7 +174,7 @@ TEMPLATE="$SCRIPT_DIR/../references/report-template.md"
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
-const TEMPLATE = join(SCRIPT_DIR, '..', 'references', 'report-template.md');
+const TEMPLATE = join(SCRIPT_DIR, '..', 'templates', 'report.md');
 ```
 
 ### Stay inside the workspace
@@ -281,7 +289,8 @@ Run the transcript once when authoring. Re-run after any script edit. If the out
 | Walls of prose | Headings, numbered steps, tables, code blocks |
 | Explaining general programming concepts | Skip — Cline already knows |
 | Duplicating an existing skill | Extend the existing skill; do not fragment knowledge |
-| 20+ unstructured steps | Split into multiple skills, or factor into `references/` |
+| 20+ unstructured steps | Split into multiple skills, or factor depth into `references/` |
+| Templates mixed into `references/` | Read-only docs → `references/`; fill-in starter files → `templates/` |
 | Vague verbs ("handle", "manage", "deal with") | Concrete verbs ("write", "validate", "commit") |
 | Backslashes in paths | Forward slashes everywhere |
 | Multiple library choices presented as equals | Pick one default; mention alternatives only when meaningful |
@@ -309,7 +318,7 @@ List existing skills in `.cline/skills/` using whichever tool Cline has availabl
 
 ### 4. Lay out the folder
 
-Create `.cline/skills/<name>/SKILL.md`. Add `references/` and `scripts/` only when actually needed — do not pre-create empty folders.
+Create `.cline/skills/<name>/SKILL.md`. Add `references/`, `templates/`, and `scripts/` only when actually needed — do not pre-create empty folders.
 
 ### 5. Write the frontmatter first
 
