@@ -18,7 +18,7 @@ if [ -f "$SOURCE_DIR/rules/00-bootstrap.md" ]; then
 fi
 
 # 2. Workflows
-for wf in brainstorm write-plan execute-plan; do
+for wf in brainstorm write-plan execute-plan check-webui-style; do
   if [ -f "$SOURCE_DIR/workflows/$wf.md" ]; then
     ln -sfn "$SOURCE_DIR/workflows/$wf.md" "$WORKFLOWS_DIR/$wf.md"
   fi

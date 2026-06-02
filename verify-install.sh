@@ -33,7 +33,7 @@ check_link() {
 check_link "$SOURCE_DIR/rules/00-bootstrap.md" "$RULES_DIR/00-bootstrap.md"
 
 # Workflows
-for wf in brainstorm write-plan execute-plan; do
+for wf in brainstorm write-plan execute-plan check-webui-style; do
   check_link "$SOURCE_DIR/workflows/$wf.md" "$WORKFLOWS_DIR/$wf.md"
 done
 
@@ -54,10 +54,10 @@ if [ -d "$SKILLS_DIR" ]; then
 fi
 
 skill_count=$(find "$SKILLS_DIR" -mindepth 1 -maxdepth 1 -type l 2>/dev/null | wc -l | tr -d ' ')
-total=$((1 + 3 + skill_count))
+total=$((1 + 4 + skill_count))
 
 if [ "$problems" -eq 0 ]; then
-  echo "OK: $total symlinks installed (1 rule + 3 workflows + $skill_count skills)"
+  echo "OK: $total symlinks installed (1 rule + 4 workflows + $skill_count skills)"
   exit 0
 else
   echo "FAIL: $problems problem(s) found"

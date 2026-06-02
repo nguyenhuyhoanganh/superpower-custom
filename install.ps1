@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 # PowerShell installer for superpower-custom. Mixed strategy:
 #   - Junction for the 13 skill folders (no admin / Developer Mode needed)
-#   - Copy for bootstrap + 3 workflow files (junctions don't work on files)
+#   - Copy for bootstrap + 4 workflow files (junctions don't work on files)
 # Idempotent: re-running refreshes copies and rebuilds junctions.
 $ErrorActionPreference = 'Stop'
 
@@ -21,7 +21,7 @@ if (Test-Path $bootstrapSource) {
 }
 
 # 2. Workflows (copy)
-foreach ($wf in 'brainstorm', 'write-plan', 'execute-plan') {
+foreach ($wf in 'brainstorm', 'write-plan', 'execute-plan', 'check-webui-style') {
     $src = Join-Path $SourceDir "workflows\$wf.md"
     if (Test-Path $src) {
         Copy-Item -Force $src (Join-Path $WorkflowsDir "$wf.md")

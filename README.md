@@ -29,8 +29,9 @@ the full Windows-specific notes.
 ## Layout
 
 - `rules/` — bootstrap rule appended to every system prompt
-- `workflows/` — slash commands (`/brainstorm`, `/write-plan`, `/execute-plan`)
-- `skills/` — 13 skills loaded on demand via `use_skill`
+- `workflows/` — slash commands (`/brainstorm`, `/write-plan`, `/execute-plan`,
+  `/check-webui-style`)
+- `skills/` — skills loaded on demand via `use_skill`
 - `docs/superpowers/specs/` — design specs
 - `docs/superpowers/plans/` — implementation plans
 
