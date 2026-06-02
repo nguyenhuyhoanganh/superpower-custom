@@ -24,11 +24,17 @@ run on the Chromium tree.
 
 ## The Gate
 
+Tuned for the Gerrit workflow: a CL is a single (amended) commit on a shared
+branch, so by default the checker looks at ONLY the most recent commit — the
+CL you're about to `git cl upload` — not the whole branch history and not other
+people's commits.
+
 ```
 1. RUN the checker on the diff:
-     bash check-style.sh            # working-tree changes vs HEAD,
-                                     # or, if clean, the most recent commit
-     bash check-style.sh origin/main   # everything since a base ref
+     bash check-style.sh            # the latest commit (HEAD~1..HEAD) [default]
+     bash check-style.sh working    # uncommitted changes (before you commit)
+     bash check-style.sh origin/main   # everything from a base ref to HEAD
+     bash check-style.sh A..B          # an explicit commit range
 
 2. READ every ERROR and WARN, mapped to file:line.
 
@@ -108,8 +114,9 @@ JS guides. Condensed reference lives in `STYLE-RULES.md` next to this file.
 ```bash
 # .git/hooks/pre-push  (chmod +x)
 #!/usr/bin/env bash
-bash path/to/skills/chromium-webui-style-check/check-style.sh origin/HEAD || {
-  echo "Style gate failed — fix ERRORs above (or run with no args to inspect)."
+# No args = check the latest commit (the CL being uploaded).
+bash path/to/skills/chromium-webui-style-check/check-style.sh || {
+  echo "Style gate failed — fix ERRORs above before uploading."
   exit 1
 }
 ```

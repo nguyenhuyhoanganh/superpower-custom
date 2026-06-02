@@ -3,38 +3,63 @@
 # `git cl presubmit`. Checks only the lines you changed (the git diff), so
 # pre-existing violations elsewhere don't drown out your own.
 #
+# Geared for the Gerrit workflow, where everyone shares one branch and a CL is
+# a single (amended) commit. So by default it checks ONLY the most recent
+# commit (HEAD~1..HEAD) -- i.e. the CL you are about to `git cl upload` -- not
+# the working tree and not a range against origin (which would pull in other
+# people's changes on the shared branch).
+#
 # Usage:
-#   check-style.sh                 # working-tree changes vs HEAD; if the tree
-#                                  # is clean, falls back to the last commit
-#                                  # (HEAD~1..HEAD)
-#   check-style.sh <base-ref>      # everything changed since <base-ref>,
-#                                  # e.g. origin/main, HEAD~3, a SHA
+#   check-style.sh                 # the most recent commit (HEAD~1..HEAD) [default]
+#   check-style.sh working         # uncommitted working-tree changes vs HEAD
+#                                  #   (use before you commit)
+#   check-style.sh <base-ref>      # committed changes from <base-ref> to HEAD,
+#                                  #   e.g. origin/main, HEAD~3, a SHA
+#   check-style.sh <a>..<b>        # an explicit commit range
 #
 # Exit code: non-zero if any ERROR is found (suitable for a pre-push hook).
 set -uo pipefail
-
-BASE="${1:-}"
 
 if ! git rev-parse --git-dir >/dev/null 2>&1; then
   echo "Not inside a git repository." >&2
   exit 2
 fi
 
-# Decide what to diff against.
-if [ -z "$BASE" ]; then
-  if ! git diff --quiet HEAD 2>/dev/null; then
-    BASE="HEAD"        # uncommitted changes present -> review the working tree
-  else
-    BASE="HEAD~1"      # clean tree -> review the most recent commit
-  fi
-fi
+# Empty-tree hash, used when HEAD has no parent (root commit).
+EMPTY_TREE="$(git hash-object -t tree /dev/null)"
+
+# Build the git-diff endpoint args (DIFF_ARGS) and a human label.
+arg="${1:-}"
+case "$arg" in
+  ""|"HEAD")
+    # Default: the most recent commit only.
+    if git rev-parse --verify -q HEAD~1 >/dev/null; then
+      DIFF_ARGS=(HEAD~1 HEAD); LABEL="latest commit (HEAD~1..HEAD)"
+    else
+      DIFF_ARGS=("$EMPTY_TREE" HEAD); LABEL="latest commit (root)"
+    fi
+    NEW_REF="HEAD"
+    ;;
+  "working"|"--working"|"-w")
+    DIFF_ARGS=(HEAD); LABEL="working tree (uncommitted vs HEAD)"
+    NEW_REF=""                       # new side is the working-tree file
+    ;;
+  *..*)
+    DIFF_ARGS=("$arg"); LABEL="range $arg"
+    NEW_REF="${arg#*..}"             # right side of the range
+    ;;
+  *)
+    DIFF_ARGS=("$arg" HEAD); LABEL="$arg..HEAD"
+    NEW_REF="HEAD"
+    ;;
+esac
 
 # Changed WebUI files (added/copied/modified/renamed).
-mapfile -t FILES < <(git diff --name-only --diff-filter=ACMR "$BASE" -- \
+mapfile -t FILES < <(git diff --name-only --diff-filter=ACMR "${DIFF_ARGS[@]}" -- \
   '*.html' '*.css' '*.ts' '*.js' 2>/dev/null)
 
 if [ "${#FILES[@]}" -eq 0 ]; then
-  echo "No changed WebUI (.html/.css/.ts/.js) files vs '$BASE'. Nothing to check."
+  echo "No changed WebUI (.html/.css/.ts/.js) files in $LABEL. Nothing to check."
   exit 0
 fi
 
@@ -44,7 +69,7 @@ trap 'rm -f "$RESULTS"' EXIT
 # Emit "LINENO<TAB>CONTENT" for each added line in $1's diff vs $BASE,
 # tracking new-file line numbers through the hunk headers.
 added_lines() {
-  git diff "$BASE" -- "$1" | awk '
+  git diff "${DIFF_ARGS[@]}" -- "$1" | awk '
     /^@@/      { s=$0; sub(/^.*\+/,"",s); sub(/[, ].*$/,"",s); nl=s+0; next }
     /^\+\+\+/  { next }
     /^\+/      { print nl "\t" substr($0,2); nl++; next }
@@ -137,8 +162,17 @@ BEGIN { FS="\t" }
 
 # ---- run checks -------------------------------------------------------------
 
+# Print the new-side content of $1 (committed version, or working-tree file
+# when checking uncommitted changes).
+new_content() {
+  if [ -z "$NEW_REF" ]; then
+    [ -f "$1" ] && cat "$1"
+  else
+    git show "$NEW_REF:$1" 2>/dev/null
+  fi
+}
+
 for f in "${FILES[@]}"; do
-  [ -f "$f" ] || continue          # skip deletes / files removed from worktree
   al="$(added_lines "$f")"
   [ -n "$al" ] || continue
 
@@ -148,7 +182,7 @@ for f in "${FILES[@]}"; do
     css)
       printf '%s\n' "$al" | awk -v F="$f" "$CSS_AWK" >> "$RESULTS"
       awk -v F="$f" "$CSS_ORDER_AWK" \
-        <(printf '%s\n' "$al" | cut -f1) "$f" >> "$RESULTS"
+        <(printf '%s\n' "$al" | cut -f1) <(new_content "$f") >> "$RESULTS"
       ;;
     html)
       printf '%s\n' "$al" | awk -v F="$f" "$HTML_AWK" >> "$RESULTS"
@@ -165,7 +199,7 @@ errors=$(grep -c '^ERROR' "$RESULTS" 2>/dev/null || true)
 warns=$(grep -c '^WARN'  "$RESULTS" 2>/dev/null || true)
 errors=${errors:-0}; warns=${warns:-0}
 
-echo "Chromium WebUI style check (diff base: $BASE, files: ${#FILES[@]})"
+echo "Chromium WebUI style check ($LABEL, files: ${#FILES[@]})"
 echo "---------------------------------------------------------------"
 if [ "$((errors + warns))" -eq 0 ]; then
   echo "Clean: no style issues on changed lines."
